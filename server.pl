@@ -1,32 +1,40 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 # Filename : server.pl
 
-use strict;
-use Socket;
+use Socket;     # For constants like AF_INET and SOCK_STREAM
 
-# use port 3000 as default
-my $port = shift || 3000;
-my $proto = getprotobyname('tcp');
-my $server = "localhost";  # Host IP running the server
+$| = 1;
 
-# create a socket, make it reusable
-socket(SOCKET, PF_INET, SOCK_STREAM, $proto)
-   or die "Can't open socket $!\n";
-setsockopt(SOCKET, SOL_SOCKET, SO_REUSEADDR, 1)
-   or die "Can't set socket option to SO_REUSEADDR $!\n";
+$proto = getprotobyname('tcp');    #get the tcp protocol
 
-# bind to a port, then listen
-bind( SOCKET, pack_sockaddr_in($port, inet_aton($server)))
-   or die "Can't bind to port $port! \n";
+# 1. create a socket handle (descriptor)
+my($sock);
+socket($sock, AF_INET, SOCK_STREAM, $proto)
+        or die "could not create socket : $!";
 
-listen(SOCKET, 5) or die "listen: $!";
-print "SERVER started on port $port\n";
+# 2. bind to local port 8888
+$port = 3000;
+bind($sock , sockaddr_in($port, INADDR_ANY))
+        or      die "bind failed : $!";
 
-# accepting a connection
-my $client_addr;
-while ($client_addr = accept(NEW_SOCKET, SOCKET)) {
-   # send them a message, close connection
-   my $name = gethostbyaddr($client_addr, AF_INET );
-   print NEW_SOCKET "Hello There !!! Perl server is working";
-   close NEW_SOCKET;
+listen($sock , 10);
+print "Server is now listening ...\n";
+
+#accept incoming connections and talk to clients
+while(1)
+{
+        my($client);
+        $addrinfo = accept($client , $sock);
+
+        my($port, $iaddr) = sockaddr_in($addrinfo);
+        my $name = gethostbyaddr($iaddr, AF_INET);
+
+        print "Connection accepted from $name : $port \n";
+
+        #send some message to the client
+        print $client "Hello There !!! Perl server is working fine !!! \n";
 }
+
+#close the socket
+close($sock);
+exit(0);
